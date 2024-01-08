@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Login from './pages/Login/Login';
 
 import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
@@ -22,10 +22,12 @@ interface LoginParmas {
 function App() {
   const [docs, setDocs] = useState([]);
 
-  const [file, setFile] = useState('');
+  const [file, setFile] = useState<any>(null);
   const user = useUser();
   const supabase = useSupabaseClient();
   console.log('user', user);
+
+  const inputFile = useRef<any>(null);
 
   useEffect(() => {
     if (user) {
@@ -75,20 +77,25 @@ function App() {
   }
 
   async function uploadDoc(e: any) {
+    console.log('--------------------e', e);
     let selectedFile = e.target.files[0];
     console.log('file is', selectedFile);
     setFile(selectedFile);
   }
 
   async function uploadFile() {
-    const { data, error } = await supabase.storage
-      .from('docs')
-      .upload(user?.id + '/' + uuidv4(), file);
-    setFile('');
-    if (data) {
-      getdocs();
-    } else {
-      console.log('error', error);
+    if (file) {
+      const { data, error } = await supabase.storage
+        .from('docs')
+        .upload(user?.id + '/' + uuidv4(), file);
+      inputFile.current.value = '';
+      inputFile.current.type = 'file';
+      setFile(null);
+      if (data) {
+        getdocs();
+      } else {
+        console.log('error', error);
+      }
     }
   }
 
@@ -122,7 +129,7 @@ function App() {
           <div>
             <Form.Group className="mt-3" style={{ maxWidth: '500px' }}>
               <Form.Control
-                value={file}
+                ref={inputFile}
                 type="file"
                 onChange={(e) => uploadDoc(e)}
               />
@@ -136,7 +143,6 @@ function App() {
           <Row xs={1} md={3} className="g-4">
             {docs.map((doc: any) => {
               const fileType = DOCUMENT_TYPES[doc.metadata.mimetype];
-              console.log('fileType is', fileType);
               const url = CDNURL + user.id + '/' + doc.name;
               return (
                 <Col key={CDNURL + user.id + '/' + doc.name}>
